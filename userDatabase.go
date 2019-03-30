@@ -9,23 +9,15 @@ var (
 	_userLogin        map[UserID]UserLogin
 	_userCardID       map[UserID]string
 	_userFriends      map[UserID][]UserID
-	_userPermissions  map[UserID][]Permission
+	_userPermissions  map[UserID][]string
 	_userGroups       map[UserID][]GroupID
-	_groupPermissions map[GroupID][]Permission
+	_groupPermissions map[GroupID][]string
 	_secretKeys       map[SecretKey]UserID
 )
 
 type UserID string
 type GroupID string
 type SecretKey string
-
-type Permission string
-
-const (
-	NONE        Permission = "NONE"
-	CREATE_USER Permission = "CREATE_USER"
-	REMOVE_USER Permission = "REMOVE_USER"
-)
 
 type UserInfo struct {
 	Firstname string `json:"firstname"`
@@ -42,9 +34,9 @@ func setupDataBase() {
 	_userLogin = make(map[UserID]UserLogin)
 	_userCardID = make(map[UserID]string)
 	_userFriends = make(map[UserID][]UserID)
-	_userPermissions = make(map[UserID][]Permission)
+	_userPermissions = make(map[UserID][]string)
 	_userGroups = make(map[UserID][]GroupID)
-	_groupPermissions = make(map[GroupID][]Permission)
+	_groupPermissions = make(map[GroupID][]string)
 	_secretKeys = make(map[SecretKey]UserID)
 }
 
@@ -52,12 +44,12 @@ func seedDatabase() {
 	_userInfo["MIKEUID"] = UserInfo{"Mike", "Schmidt"}
 	_userLogin["MIKEUID"] = UserLogin{"mschmidt", "1234"}
 	_userCardID["MIKEUID"] = "1234"
-	_groupPermissions["ADMIN"] = []Permission{CREATE_USER, REMOVE_USER}
+	_groupPermissions["ADMIN"] = []string{"CREATE_USER", "REMOVE_USER"}
 	_userGroups["MIKEUID"] = []GroupID{"ADMIN"}
 	//_userPermissions["MIKEUID"] = []Permission{CREATE_USER, REMOVE_USER}
 }
-func secretKeyHasPermission(secretKey SecretKey, requiredPermission Permission) bool {
-	var Permissions []Permission
+func secretKeyHasPermission(secretKey SecretKey, requiredPermission string) bool {
+	var Permissions []string
 	log.Tracef("Looking for UserId with SecretKey %v", secretKey)
 	userID := _secretKeys[secretKey]
 	if userID != "" {
@@ -66,14 +58,14 @@ func secretKeyHasPermission(secretKey SecretKey, requiredPermission Permission) 
 	}
 	return PermissionInPermissions(requiredPermission, Permissions)
 }
-func getAllPermissionsForUserID(userID UserID) []Permission {
+func getAllPermissionsForUserID(userID UserID) []string {
 	permissions := _userPermissions[userID]
 	for _, groupID := range _userGroups[userID] {
 		permissions = append(permissions, _groupPermissions[groupID]...)
 	}
 	return permissions
 }
-func PermissionInPermissions(requiredPermission Permission, Permissions []Permission) bool {
+func PermissionInPermissions(requiredPermission string, Permissions []string) bool {
 	for _, permission := range Permissions {
 		if permission == requiredPermission {
 			log.Trace("Has Permission")

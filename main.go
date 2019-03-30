@@ -31,10 +31,10 @@ func main() {
 		},
 	}
 
-	myMux.Handle("/api/getSecretKey", getSecretKeyHandler, NONE)
-	myMux.Handle("/api/closeSecretKey", closeSecretKeyHandler, NONE)
-	myMux.Handle("/api/getUserInfoForSecretKey", getUserInfoForSecretKeyHandler, NONE)
-	myMux.Handle("/api/createUser", createUserHandler, CREATE_USER)
+	myMux.Handle("/api/getSecretKey", getSecretKeyHandler, "NONE")
+	myMux.Handle("/api/closeSecretKey", closeSecretKeyHandler, "NONE")
+	myMux.Handle("/api/getUserInfoForSecretKey", getUserInfoForSecretKeyHandler, "NONE")
+	myMux.Handle("/api/createUser", createUserHandler, "CREATE_USER")
 
 	//http.HandleFunc("/api/addUser", addUserHandler)
 	//http.HandleFunc("/api/addFriend", addFriendHandler)
@@ -96,14 +96,14 @@ type Handler func(*Context)
 type Route struct {
 	Pattern    *regexp.Regexp
 	Handler    Handler
-	Permission Permission
+	Permission string
 }
 type CustomMux struct {
 	Routes       []Route
 	DefaultRoute Handler
 }
 
-func (customMux *CustomMux) Handle(pattern string, handler Handler, permission Permission) {
+func (customMux *CustomMux) Handle(pattern string, handler Handler, permission string) {
 	regexp := regexp.MustCompile(pattern)
 	route := Route{Pattern: regexp, Handler: handler, Permission: permission}
 
@@ -117,7 +117,7 @@ func (customMux *CustomMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if matches := route.Pattern.FindStringSubmatch(context.URL.Path); len(matches) > 0 {
 			context.Parameters = context.URL.Query()
 			secretKey := SecretKey(context.Parameters.Get("secretKey"))
-			if (route.Permission == NONE) || (secretKey != "" && secretKeyHasPermission(secretKey, route.Permission)) {
+			if (route.Permission == "NONE") || (secretKey != "" && secretKeyHasPermission(secretKey, route.Permission)) {
 				route.Handler(context)
 			}
 			return
