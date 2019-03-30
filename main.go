@@ -28,12 +28,12 @@ func main() {
 		},
 	}
 
-	myMux.Handle("/api/getSecretKey", getSecretKeyHandler, "NONE")
-	myMux.Handle("/api/closeSecretKey", closeSecretKeyHandler, "NONE")
-	myMux.Handle("/api/getUserInfoForSecretKey", getUserInfoForSecretKeyHandler, "NONE")
+	myMux.Handle("/api/getToken", getTokenHandler, "NONE")
+	myMux.Handle("/api/closeToken", closeTokenHandler, "NONE")
+	myMux.Handle("/api/getUserInfoForToken", getUserInfoForTokenHandler, "NONE")
 	myMux.Handle("/api/createUser", createUserHandler, "CREATE_USER")
+	myMux.Handle("/api/deleteUser", deleteUserHandler, "DELETE_USER")
 
-	//http.HandleFunc("/api/addUser", addUserHandler)
 	//http.HandleFunc("/api/addFriend", addFriendHandler)
 
 	log.Trace("Opening HTTP Server")
@@ -49,6 +49,9 @@ func createUserHandler(context *Context) {
 	context.ReturnData["username"] = "test!" + username
 
 	context.returnJson(http.StatusOK)
+}
+func deleteUserHandler(context *Context) {
+
 }
 func addFriendHandler(context *Context) {
 	context.ResponseWriter.Header().Set("Content-Type", "application/json")
@@ -72,19 +75,19 @@ func listFriendHandler(context *Context) {
 
 }
 
-func getUserInfoForSecretKeyHandler(context *Context) {
-	context.ReturnData = getUserInfoForSecretKey(context.Parameters.Get("secretKey"))
+func getUserInfoForTokenHandler(context *Context) {
+	context.ReturnData = getUserInfoForToken(context.Parameters.Get("token"))
 	context.returnJson(http.StatusOK)
 }
-func getSecretKeyHandler(context *Context) {
+func getTokenHandler(context *Context) {
 	username := context.Parameters.Get("username")
 	password := context.Parameters.Get("password")
 	cardID := context.Parameters.Get("cardID")
 
-	context.ReturnData["secretKey"] = getSecretKey(username, password, cardID)
+	context.ReturnData["token"] = getToken(username, password, cardID)
 	context.returnJson(http.StatusOK)
 }
-func closeSecretKeyHandler(context *Context) {
-	closeSecretKey(context.Parameters.Get("secretKey"))
+func closeTokenHandler(context *Context) {
+	closeToken(context.Parameters.Get("token"))
 	context.returnJson(http.StatusOK)
 }

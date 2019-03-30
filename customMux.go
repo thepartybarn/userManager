@@ -31,8 +31,8 @@ func (customMux *CustomMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Debug(route)
 		if matches := route.Pattern.FindStringSubmatch(context.URL.Path); len(matches) > 0 {
 			context.Parameters = context.URL.Query()
-			secretKey := SecretKey(context.Parameters.Get("secretKey"))
-			if (route.Permission == "NONE") || (secretKey != "" && secretKeyHasPermission(secretKey, route.Permission)) {
+			token := Token(context.Parameters.Get("token"))
+			if (route.Permission == "NONE") || (token != "" && tokenHasPermission(token, route.Permission)) {
 				route.Handler(context)
 			}
 			return

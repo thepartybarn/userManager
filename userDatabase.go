@@ -12,12 +12,12 @@ var (
 	_userPermissions  map[UserID][]string
 	_userGroups       map[UserID][]GroupID
 	_groupPermissions map[GroupID][]string
-	_secretKeys       map[SecretKey]UserID
+	_tokens           map[Token]UserID
 )
 
 type UserID string
 type GroupID string
-type SecretKey string
+type Token string
 
 type UserInfo struct {
 	Firstname string `json:"firstname"`
@@ -37,7 +37,7 @@ func setupDataBase() {
 	_userPermissions = make(map[UserID][]string)
 	_userGroups = make(map[UserID][]GroupID)
 	_groupPermissions = make(map[GroupID][]string)
-	_secretKeys = make(map[SecretKey]UserID)
+	_tokens = make(map[Token]UserID)
 }
 
 func seedDatabase() {
@@ -48,12 +48,12 @@ func seedDatabase() {
 	_userGroups["MIKEUID"] = []GroupID{"ADMIN"}
 	//_userPermissions["MIKEUID"] = []Permission{CREATE_USER, REMOVE_USER}
 }
-func secretKeyHasPermission(secretKey SecretKey, requiredPermission string) bool {
+func tokenHasPermission(token Token, requiredPermission string) bool {
 	var Permissions []string
-	log.Tracef("Looking for UserId with SecretKey %v", secretKey)
-	userID := _secretKeys[secretKey]
+	log.Tracef("Looking for UserId with Token %v", token)
+	userID := _tokens[token]
 	if userID != "" {
-		log.Tracef("Found UserID: %v for SecretKey %v", userID, secretKey)
+		log.Tracef("Found UserID: %v for Token %v", userID, token)
 		Permissions = getAllPermissionsForUserID(userID)
 	}
 	return PermissionInPermissions(requiredPermission, Permissions)
@@ -75,10 +75,10 @@ func PermissionInPermissions(requiredPermission string, Permissions []string) bo
 	return false
 }
 
-func getUserInfoForSecretKey(secretKeyString string) (outputData map[string]interface{}) {
+func getUserInfoForToken(tokenString string) (outputData map[string]interface{}) {
 	outputData = make(map[string]interface{})
-	secretKey := SecretKey(secretKeyString)
-	guid, ok := _secretKeys[secretKey]
+	token := Token(tokenString)
+	guid, ok := _tokens[token]
 	if ok {
 		userInfo, ok := _userInfo[guid]
 		if ok {
@@ -93,36 +93,36 @@ func getUserInfoForSecretKey(secretKeyString string) (outputData map[string]inte
 
 	return
 }
-func getSecretKey(username, password, cardID string) (secretKey string) {
-	log.Tracef("getSecretKey (Username: %s, Password: %s, CardID: %s)", username, password, cardID)
+func getToken(username, password, cardID string) (token string) {
+	log.Tracef("getToken (Username: %s, Password: %s, CardID: %s)", username, password, cardID)
 
 	if username != "" && password != "" {
 		passwordHash := hashPassword(password)
 
 		for userID, userLogin := range _userLogin {
 			if userLogin.Username == username && userLogin.PasswordHash == passwordHash {
-				secretKey = string(generateSecretKey(userID))
+				token = string(generateToken(userID))
 			}
 		}
 	} else if cardID != "" {
 		for userID, CardID := range _userCardID {
 			if cardID == CardID {
-				secretKey = string(generateSecretKey(userID))
+				token = string(generateToken(userID))
 			}
 		}
 	}
 	return
 }
-func closeSecretKey(secretKey string) {
-	delete(_secretKeys, SecretKey(secretKey))
+func closeToken(token string) {
+	delete(_tokens, Token(token))
 }
 
 func hashPassword(password string) (passwordHash string) {
 	passwordHash = password
 	return
 }
-func generateSecretKey(userID UserID) (secretKey SecretKey) {
-	secretKey = SecretKey(fmt.Sprintf("%vSecretKey", userID))
-	_secretKeys[secretKey] = userID
+func generateToken(userID UserID) (token Token) {
+	token = Token(fmt.Sprintf("%vToken", userID))
+	_tokens[token] = userID
 	return
 }
