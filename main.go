@@ -31,10 +31,12 @@ func main() {
 	myMux.Handle("/api/getToken", getTokenHandler, "NONE")
 	myMux.Handle("/api/closeToken", closeTokenHandler, "NONE")
 	myMux.Handle("/api/getUserInfoForToken", getUserInfoForTokenHandler, "NONE")
+
 	myMux.Handle("/api/createUser", createUserHandler, "CREATE_USER")
 	myMux.Handle("/api/deleteUser", deleteUserHandler, "DELETE_USER")
 
-	//http.HandleFunc("/api/addFriend", addFriendHandler)
+	myMux.Handle("/api/addPermissionToUser", addPermissionToUserHandler, "ADD_PERMISSION_TO_USER")
+	myMux.Handle("/api/removePermissionFromUser", removePermissionFromUserHandler, "Remove_PERMISSION_FROM_USER")
 
 	log.Trace("Opening HTTP Server")
 	err = http.ListenAndServe(":80", myMux)
@@ -43,6 +45,12 @@ func main() {
 	}
 }
 
+func addPermissionToUserHandler(context *Context) {
+
+}
+func removePermissionFromUserHandler(context *Context) {
+
+}
 func createUserHandler(context *Context) {
 	username := context.Parameters.Get("username")
 
@@ -83,6 +91,7 @@ func getTokenHandler(context *Context) {
 	username := context.Parameters.Get("username")
 	password := context.Parameters.Get("password")
 	cardID := context.Parameters.Get("cardID")
+	log.Tracef("getTokenHandler (Username: %s, Password: %s, CardID: %s)", username, password, cardID)
 
 	context.ReturnData["token"] = getToken(username, password, cardID)
 	context.returnJson(http.StatusOK)

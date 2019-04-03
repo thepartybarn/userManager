@@ -1,72 +1,70 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 )
 
 var (
-	_userInfo         map[UserID]UserInfo
-	_userLogin        map[UserID]UserLogin
-	_userCardID       map[UserID]string
-	_userFriends      map[UserID][]UserID
-	_userPermissions  map[UserID][]string
-	_userGroups       map[UserID][]GroupID
+	_users            []*UserInfo
 	_groupPermissions map[GroupID][]string
-	_tokens           map[Token]UserID
+	_tokens           map[Token]*UserInfo
 )
 
-type UserID string
 type GroupID string
 type Token string
 
 type UserInfo struct {
-	Firstname string `json:"firstname"`
-	Lastname  string `json:"lastname"`
-}
-type UserLogin struct {
-	Username     string `json:"username"`
-	PasswordHash string `json:"PasswordHash"`
+	Firstname    string    `json:"firstname"`
+	Lastname     string    `json:"lastname"`
+	PasswordHash string    `json:"passwordHash"`
+	CardID       string    `json:"cardID"`
+	FriendOf     *UserInfo `json:"friendOf"`
+	Permissions  []string  `json:"permissions"`
+	Groups       []GroupID `json:"groups"`
 }
 
 func setupDataBase() {
 	log.Trace("Setting Up Database")
-	_userInfo = make(map[UserID]UserInfo)
-	_userLogin = make(map[UserID]UserLogin)
-	_userCardID = make(map[UserID]string)
-	_userFriends = make(map[UserID][]UserID)
-	_userPermissions = make(map[UserID][]string)
-	_userGroups = make(map[UserID][]GroupID)
 	_groupPermissions = make(map[GroupID][]string)
-	_tokens = make(map[Token]UserID)
+	_tokens = make(map[Token]*UserInfo)
 }
 
 func seedDatabase() {
-	_userInfo["MIKEUID"] = UserInfo{"Mike", "Schmidt"}
-	_userLogin["MIKEUID"] = UserLogin{"mschmidt", "1234"}
-	_userCardID["MIKEUID"] = "1234"
+	user := createUser("Mike", "Schmidt", "1234", "1234", nil)
 	_groupPermissions["ADMIN"] = []string{"CREATE_USER", "REMOVE_USER"}
-	_userGroups["MIKEUID"] = []GroupID{"ADMIN"}
-	//_userPermissions["MIKEUID"] = []Permission{CREATE_USER, REMOVE_USER}
+	user.Groups = []GroupID{"ADMIN", "OWNER"}
+	user.Permissions = []string{"CREATE_USER", "REMOVE_USER"}
+	log.Tracef("Default User: %+v", user)
 }
 func tokenHasPermission(token Token, requiredPermission string) bool {
-	var Permissions []string
+	HasPermission := false
 	log.Tracef("Looking for UserId with Token %v", token)
-	userID := _tokens[token]
-	if userID != "" {
-		log.Tracef("Found UserID: %v for Token %v", userID, token)
-		Permissions = getAllPermissionsForUserID(userID)
+	if _tokens[token] != nil {
+		log.Tracef("Found: %+v for Token %v", _tokens[token], token)
+		HasPermission = _tokens[token].HasPermission(requiredPermission)
 	}
-	return PermissionInPermissions(requiredPermission, Permissions)
+	return HasPermission
 }
-func getAllPermissionsForUserID(userID UserID) []string {
-	permissions := _userPermissions[userID]
-	for _, groupID := range _userGroups[userID] {
-		permissions = append(permissions, _groupPermissions[groupID]...)
+
+func (userInfo *UserInfo) GenerateToken() (token Token) {
+	log.Tracef("User: %+v", userInfo)
+	token = Token(fmt.Sprintf("%v.%v-Token", userInfo.Firstname, userInfo.Lastname))
+	log.Tracef("Token Generated %v", token)
+	_tokens[token] = userInfo
+	return
+}
+func (userInfo *UserInfo) HasPermission(requiredPermission string) bool {
+	log.Tracef("User: %+v", userInfo)
+
+	for _, group := range userInfo.Groups {
+		if group == "OWNER" {
+			log.Trace("Is Owner")
+			return true
+		}
 	}
-	return permissions
-}
-func PermissionInPermissions(requiredPermission string, Permissions []string) bool {
-	for _, permission := range Permissions {
+
+	for _, permission := range userInfo.Permissions {
 		if permission == requiredPermission {
 			log.Trace("Has Permission")
 			return true
@@ -78,36 +76,29 @@ func PermissionInPermissions(requiredPermission string, Permissions []string) bo
 func getUserInfoForToken(tokenString string) (outputData map[string]interface{}) {
 	outputData = make(map[string]interface{})
 	token := Token(tokenString)
-	guid, ok := _tokens[token]
-	if ok {
-		userInfo, ok := _userInfo[guid]
-		if ok {
-			outputData["Firstname"] = userInfo.Firstname
-			outputData["Lastname"] = userInfo.Lastname
-		}
-		userLogin, ok := _userLogin[guid]
-		if ok {
-			outputData["Username"] = userLogin.Username
-		}
+	if _tokens[token] != nil {
+		log.Tracef("User: %+v", _tokens[token])
+		inBytes, _ := json.Marshal(_tokens[token])
+		json.Unmarshal(inBytes, &outputData)
 	}
 
 	return
 }
-func getToken(username, password, cardID string) (token string) {
+func getToken(username, password, cardID string) (token Token) {
 	log.Tracef("getToken (Username: %s, Password: %s, CardID: %s)", username, password, cardID)
 
 	if username != "" && password != "" {
 		passwordHash := hashPassword(password)
 
-		for userID, userLogin := range _userLogin {
-			if userLogin.Username == username && userLogin.PasswordHash == passwordHash {
-				token = string(generateToken(userID))
+		for _, userInfo := range _users {
+			if fmt.Sprintf("%v.%v", userInfo.Firstname, userInfo.Lastname) == username && userInfo.PasswordHash == passwordHash {
+				token = userInfo.GenerateToken()
 			}
 		}
 	} else if cardID != "" {
-		for userID, CardID := range _userCardID {
-			if cardID == CardID {
-				token = string(generateToken(userID))
+		for _, userInfo := range _users {
+			if cardID == userInfo.CardID {
+				token = userInfo.GenerateToken()
 			}
 		}
 	}
@@ -121,8 +112,9 @@ func hashPassword(password string) (passwordHash string) {
 	passwordHash = password
 	return
 }
-func generateToken(userID UserID) (token Token) {
-	token = Token(fmt.Sprintf("%vToken", userID))
-	_tokens[token] = userID
-	return
+
+func createUser(firstname, lastname, password, cardID string, friendOf *UserInfo) *UserInfo {
+	userToAdd := UserInfo{firstname, lastname, hashPassword(password), cardID, friendOf, make([]string, 0), make([]GroupID, 0)}
+	_users = append(_users, &userToAdd)
+	return &userToAdd
 }

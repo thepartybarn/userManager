@@ -28,7 +28,6 @@ func (customMux *CustomMux) Handle(pattern string, handler Handler, permission s
 func (customMux *CustomMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	context := &Context{Request: r, ResponseWriter: w, ReturnData: make(map[string]interface{})}
 	for _, route := range customMux.Routes {
-		log.Debug(route)
 		if matches := route.Pattern.FindStringSubmatch(context.URL.Path); len(matches) > 0 {
 			context.Parameters = context.URL.Query()
 			token := Token(context.Parameters.Get("token"))
