@@ -14,6 +14,7 @@ var (
 type GroupID string
 type Token string
 
+//Struct for storing user information
 type UserInfo struct {
 	Firstname    string    `json:"firstname"`
 	Lastname     string    `json:"lastname"`
