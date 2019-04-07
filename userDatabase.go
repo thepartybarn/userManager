@@ -25,6 +25,7 @@ type UserInfo struct {
 	Groups       []GroupID `json:"groups"`
 }
 
+//Function to setup database
 func setupDataBase() {
 	log.Trace("Setting Up Database")
 	_groupPermissions = make(map[GroupID][]string)
